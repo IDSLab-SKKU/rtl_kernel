@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 import axi_vip_pkg::*;
-import axi_vip_axi_vip_0_0_pkg::*; 
+import test_axi_vip_0_0_pkg::*; 
 
 `define ADDR_USER_CTRL      6'h10
 `define ADDR_BYTE_LEN_DATA  6'h14
@@ -82,11 +82,11 @@ module dmac_tb(
         
    
    
-    axi_vip_axi_vip_0_0_slv_mem_t slv_agent0;
+    test_axi_vip_0_0_slv_mem_t slv_agent0;
 
     initial begin
             // AXI VIP Slave Agent 생성 및 시작
-        slv_agent0 = new("slv_agent0", axi_vip.axi_vip_i.axi_vip_0.inst.IF);
+        slv_agent0 = new("slv_agent0", axi_vip_inst.test_i.axi_vip_0.inst.IF);
         slv_agent0.start_slave();
         slv_agent0.set_verbosity(400);
     end
@@ -150,7 +150,7 @@ module dmac_tb(
     );
 
 
-  axi_vip_wrapper axi_vip
+  test_wrapper axi_vip_inst
        (.S_AXI_araddr(m_axi_araddr),
         .S_AXI_arburst(m_axi_arburst),
         .S_AXI_arid('d0),
