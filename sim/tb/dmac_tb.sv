@@ -1,28 +1,19 @@
 `timescale 1ns / 1ps
-//////////////////////////////////////////////////////////////////////////////////
-// Company: 
-// Engineer: 
-// 
-// Create Date: 01/29/2025 07:50:29 AM
-// Design Name: 
-// Module Name: dmac_tb
-// Project Name: 
-// Target Devices: 
-// Tool Versions: 
-// Description: 
-// 
-// Dependencies: 
-// 
-// Revision:
-// Revision 0.01 - File Created
-// Additional Comments:
-// 
-//////////////////////////////////////////////////////////////////////////////////
 
 import axi_vip_pkg::*;
 import axi_vip_axi_vip_0_0_pkg::*; 
 
-
+`define ADDR_USER_CTRL      6'h10
+`define ADDR_BYTE_LEN_DATA  6'h14
+`define ADDR_SRC_DATA       6'h18
+`define ADDR_DST_DATA       6'h1c
+    
+`define START               32'd1
+`define DONE                32'd2
+`define DATA_SIZE           1024
+    
+`define SRC_ADDR            32'h1000_0000
+`define DST_ADDR            32'h2000_0000
 
 module dmac_tb(
 
@@ -30,7 +21,8 @@ module dmac_tb(
     
     parameter integer C_S_AXI_CONTROL_ADDR_WIDTH = 12;
     parameter integer C_S_AXI_CONTROL_DATA_WIDTH = 32;
-    
+    parameter integer C_M_AXI_ADDR_WIDTH = 32;
+    parameter integer C_M_AXI_DATA_WIDTH = 256;
     
     logic                                    ap_clk;
     logic                                    ap_rstn;
@@ -198,19 +190,9 @@ module dmac_tb(
         .S_AXI_wvalid(m_axi_wvalid),
         .aclk(ap_clk),
         .aresetn(ap_rstn ));
-
-
-localparam
-    ADDR_USER_CTRL       = 6'h10,
-    ADDR_BYTE_LEN_DATA   = 6'h14,
-    ADDR_SRC_DATA        = 6'h18,
-    ADDR_DST_DATA        = 6'h1c,
-    
-    START                = 32'd1,
-    DONE                 = 32'd2;
-    
+        
     // Reset Task
-    task automatic reset();
+    task reset();
     begin
         ap_clk = 1'b0;
         ap_rstn = 1'b1;
@@ -238,21 +220,23 @@ localparam
 
     
  
-task automatic axi_write_request(input [31:0] addr);
+task axi_write_request(input [31:0] addr);
 begin
 
-    @(posedge ap_clk);
-    #1
+
+    #0
     s_axi_control_awvalid = 1'b1;
     s_axi_control_awaddr  = addr;
+    
+    
+    @(posedge ap_clk);
+
     
     while (s_axi_control_awready == 1'b0) begin
         @(posedge ap_clk);
     end
 
-    
-    @(posedge ap_clk);
-    #1
+    #0
     s_axi_control_awvalid = 1'b0;
     s_axi_control_awaddr  = 'h0;
 end    
@@ -260,46 +244,53 @@ end
 endtask    
 
 
-task automatic axi_write_data(input [255:0] data);
+task axi_write_data(input [255:0] data);
 begin
 
-    @(posedge ap_clk);
-    #1
+  
+    #0
     s_axi_control_wvalid = 1'b1;
     s_axi_control_wstrb = 4'b1111;
     s_axi_control_wdata  = data;
-
-    if( s_axi_control_wready == 1'b1) begin
+    
+      @(posedge ap_clk);
+        
+    while( s_axi_control_wready == 1'b0) begin
         @(posedge ap_clk);
-        #1
-        s_axi_control_wvalid = 1'b0;
+    end                   
+    
+    #0
+     s_axi_control_wvalid = 1'b0;
         s_axi_control_wstrb = 4'b0;
         s_axi_control_wdata  = 'h0;
-    end                                                                               
+                                                                
         
    
 end
 endtask    
         
 
-task automatic axi_write_response ();
+task axi_write_response ();
 begin
-
-    @(posedge ap_clk);
-    #1
+    #0
     s_axi_control_bready = 1'b1;
-    if( s_axi_control_bvalid == 1'b1) begin
+    
+      @(posedge ap_clk);
+    
+    while( s_axi_control_bvalid == 1'b0) begin
         @(posedge ap_clk);
-        #1
-        s_axi_control_bready = 1'b0;
+      
     end    
+   #0
+    s_axi_control_bready = 1'b0;  
+      
         
    
 end
 endtask    
         
 
-task automatic axi_write_ch (input [31:0] addr, [255:0] data);
+task axi_write_ch (input [31:0] addr, [255:0] data);
 begin
 
 axi_write_request(addr);
@@ -309,21 +300,20 @@ axi_write_response();
 end
 endtask    
 
-task automatic axi_read_request(input [31:0] addr);
+task axi_read_request(input [31:0] addr);
 begin
 
-    @(posedge ap_clk);
-    #1
+    #0
     s_axi_control_arvalid = 1'b1;
     s_axi_control_araddr  = addr;
+
+      @(posedge ap_clk);
     
     while (s_axi_control_arready == 1'b0) begin
         @(posedge ap_clk);
     end
 
-    
-    @(posedge ap_clk);
-    #1
+    #0
     s_axi_control_arvalid = 1'b0;
     s_axi_control_araddr  = 'h0;
 end    
@@ -331,26 +321,29 @@ end
 endtask    
 
 
-task automatic axi_read_data( output logic [255:0] read_data);
+task axi_read_data( output logic [255:0] read_data);
 begin
 
-    @(posedge ap_clk);
-    #1
+ 
+    #0
     s_axi_control_rready = 1'b1;
 
-    if( s_axi_control_rvalid == 1'b1) begin
-        read_data = s_axi_control_rdata;
+      @(posedge ap_clk);
+
+    while( s_axi_control_rvalid == 1'b0) begin
         @(posedge ap_clk);
-        #1
-        s_axi_control_rready = 1'b0;
-    end                                                                               
         
+ 
+    end            
+    #0                                                                   
+        read_data = s_axi_control_rdata;
+         s_axi_control_rready = 1'b0;
    
 end
 endtask    
         
 
-task automatic axi_read_ch (input [31:0] addr, output logic [255:0] read_data);
+task axi_read_ch (input [31:0] addr, output logic [255:0] read_data);
 begin
 
 axi_read_request(addr);
@@ -360,6 +353,9 @@ axi_read_data(read_data);
 end
 endtask            
     
+    
+localparam BYTE_LEN = 4*`DATA_SIZE;    
+    
 logic [31:0] read_data;   
 logic [31:0] krnl_done;     
     
@@ -368,20 +364,22 @@ always #5 ap_clk = ~ap_clk;
 initial begin
 
 reset();
+@(posedge ap_clk);
 
-axi_write_ch(ADDR_BYTE_LEN_DATA, 'd8192*2 );
-axi_write_ch(ADDR_SRC_DATA, 'h2000_0000 );
-axi_write_ch(ADDR_DST_DATA, 'h3000_0000 );
-axi_write_ch(ADDR_USER_CTRL, START );
+
+axi_write_ch(`ADDR_BYTE_LEN_DATA, BYTE_LEN );
+axi_write_ch(`ADDR_SRC_DATA, `SRC_ADDR );
+axi_write_ch(`ADDR_DST_DATA, `DST_ADDR );
+axi_write_ch(`ADDR_USER_CTRL, `START );
 
 read_data = 32'b0;
 krnl_done = 32'b0;
 
 
-while ( krnl_done != DONE) begin
+while ( krnl_done != `DONE) begin
 
 
-axi_read_ch(ADDR_USER_CTRL, read_data ); 
+axi_read_ch(`ADDR_USER_CTRL, read_data ); 
 krnl_done = read_data & (32'hffff_fff2) ;
     
 end
@@ -394,9 +392,9 @@ $finish;
 
 end
     
+
+
     
-
-
 
     
 endmodule
